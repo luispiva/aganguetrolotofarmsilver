@@ -1,86 +1,73 @@
 import { GoogleGenAI } from "@google/genai";
 import { FlipOpportunity } from "../types";
 
-// Inicialização seguindo as diretrizes de segurança e performance
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Inicializa o cliente Gemini de forma segura.
+ * O process.env.API_KEY é injetado pelo Vite conforme definido no vite.config.ts.
+ */
+const getAIClient = () => {
+  try {
+    const key = process.env.API_KEY;
+    if (!key || key === "undefined" || key === "") {
+      console.warn("Aviso: API_KEY não configurada nas variáveis de ambiente.");
+      return null;
+    }
+    return new GoogleGenAI({ apiKey: key });
+  } catch (e) {
+    console.error("Erro ao inicializar GoogleGenAI:", e);
+    return null;
+  }
+};
 
 export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
+  const genAI = getAIClient();
+  if (!genAI) {
+    return "A análise de IA requer uma API_KEY configurada na Vercel para funcionar.";
+  }
+
   try {
-    // 1. Cálculo de Taxa e Custos
-    const taxRate = 0.065; // 6.5% Premium
-    const taxCost = Math.floor(flip.sellPrice * taxRate);
+    const isDangerous = flip.buyCity === 'Caerleon' || flip.sellCity === 'Caerleon' || flip.sellCity === 'Black Market';
     
-    // 2. Análise de Risco de Rota
-    const isDangerousRoute = 
-      flip.buyCity === 'Caerleon' || 
-      flip.sellCity === 'Caerleon' || 
-      flip.sellCity === 'Black Market';
-    
-    const riskProfile = isDangerousRoute 
-      ? "ALTO RISCO (Envolve Zona Vermelha/Full Loot - Possível Gank)" 
-      : "BAIXO RISCO (Viagem segura por Zonas Azuis/Amarelas)";
-
-    // 3. Classificação de Liquidez
-    let liquidityLabel = "BAIXA";
-    if (flip.volume > 150) liquidityLabel = "MÉDIA";
-    if (flip.volume > 400) liquidityLabel = "ALTA";
-
     const prompt = `
-      Atue como um especialista em economia e trader veterano do Albion Online.
-      Analise tecnicamente esta oportunidade de arbitragem com os seguintes dados processados:
+      Atue como um analista veterano do Albion Online.
+      Analise esta oportunidade:
+      - Item: ${flip.itemName} (Tier ${flip.tier})
+      - Rota: ${flip.buyCity} -> ${flip.sellCity}
+      - Lucro Estimado: ${flip.profit.toLocaleString()} de prata
+      - Margem (ROI): ${flip.profitMargin}%
+      - Risco da Rota: ${isDangerous ? 'ALTO (Zona Vermelha)' : 'BAIXO (Zonas Seguras)'}
       
-      DADOS DO PRODUTO:
-      - Item: ${flip.itemName} (Tier ${flip.tier}, Qualidade ${flip.quality})
-      - Liquidez/Giro: ${liquidityLabel} (Volume base: ${flip.volume})
-      
-      DADOS DA ROTA:
-      - Origem: ${flip.buyCity} -> Destino: ${flip.sellCity}
-      - Perfil de Viagem: ${riskProfile}
-      
-      FINANCEIRO (Valores em Prata):
-      - Preço Compra: ${flip.buyPrice}
-      - Preço Venda: ${flip.sellPrice}
-      - Custo de Imposto (6.5%): -${taxCost}
-      - Lucro Líquido Real: ${flip.profit}
-      - Retorno (ROI): ${flip.profitMargin}%
-      
-      TAREFA:
-      Forneça uma análise estratégica concisa (máximo 80 palavras) em Português do Brasil.
-      Avalie se o lucro líquido justifica o risco da rota e se a liquidez permite um retorno rápido do capital investido.
-      Termine com um veredito: "Altamente Recomendado", "Cautela Necessária" ou "Não Recomendado".
+      Forneça uma análise de no máximo 50 palavras em Português do Brasil focando em liquidez e perigo. 
+      Termine com um veredito curto: [RECOMENDADO], [CUIDADO] ou [ARRISCADO].
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await genAI.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
-    return response.text || "Não foi possível gerar a análise detalhada.";
+    return response.text || "Não foi possível obter uma análise clara no momento.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Análise de IA indisponível. Verifique se a API_KEY foi configurada na Vercel.";
+    console.error("Erro na chamada do Gemini:", error);
+    return "Ocorreu um erro ao consultar a inteligência artificial.";
   }
 };
 
 export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<string> => {
+  const genAI = getAIClient();
+  if (!genAI || flips.length === 0) return "";
+
   try {
-    const topFlips = flips.slice(0, 5).map(f => `${f.itemName}: Compra ${f.buyCity} -> Venda ${f.sellCity} (${f.profitMargin}% margem)`).join('\n');
+    const topItems = flips.slice(0, 3).map(f => f.itemName).join(', ');
+    const prompt = `Resuma o mercado atual de Albion Online em uma frase curta baseado nestes itens lucrativos: ${topItems}.`;
 
-    const prompt = `
-      Aqui estão as top 5 oportunidades de arbitragem no Albion Online agora:
-      ${topFlips}
-      
-      Resuma a condição atual do mercado em 2 frases em Português. 
-      Existem cidades específicas dominando a oferta ou demanda?
-    `;
-
-    const response = await ai.models.generateContent({
+    const response = await genAI.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
-    return response.text || "Visão geral indisponível.";
+    return response.text || "";
   } catch (error) {
-    return "Não foi possível gerar a visão geral do mercado.";
+    return "";
   }
 };

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>A Gangue Trololo Farm</title>
-    <!-- Mantendo Tailwind via CDN para simplicidade -->
+    <!-- Tailwind via CDN para prototipagem -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -12,6 +12,7 @@
         font-family: 'Inter', sans-serif;
         background-color: #0f172a; /* Slate 900 */
         color: #e2e8f0; /* Slate 200 */
+        margin: 0;
       }
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
@@ -45,7 +46,7 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- Ponto de entrada principal gerenciado pelo Vite -->
+    <!-- O Vite gerencia este import automaticamente no build -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
