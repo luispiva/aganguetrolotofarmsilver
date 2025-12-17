@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, Settings, Globe, MapPin, Crown } from 'lucide-react';
+import { Coins, Settings, Globe, MapPin, Crown, Youtube, Tv } from 'lucide-react';
 import { GameServer } from '../types';
 
 interface NavbarProps {
@@ -31,6 +31,35 @@ const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+      {/* Top Utility Bar with Socials and Custom Phrase */}
+      <div className="bg-slate-950 border-b border-slate-800/50 py-1.5 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+          <div className="flex items-center gap-4">
+            <a 
+              href="https://www.youtube.com/@DLopes94" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-wider"
+            >
+              <Youtube className="h-3.5 w-3.5" />
+              YouTube
+            </a>
+            <a 
+              href="https://www.twitch.tv/Dlopes94" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-purple-500 transition-colors uppercase tracking-wider"
+            >
+              <Tv className="h-3.5 w-3.5" />
+              Twitch
+            </a>
+          </div>
+          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80 animate-pulse">
+            Se for chorar manda áudio.
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
@@ -48,6 +77,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' 
                     : 'bg-slate-800 border-slate-700 text-slate-500'
                   }`}
+                  title={hasPremium ? "Status: PREMIUM (6.5% Taxa)" : "Status: NORMAL (10.5% Taxa)"}
                >
                   <Crown className={`h-4 w-4 ${hasPremium ? 'fill-amber-500' : ''}`} />
                   <span className="text-[10px] font-bold hidden lg:block uppercase tracking-wider">
