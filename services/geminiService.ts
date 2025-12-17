@@ -5,10 +5,11 @@ export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
   const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    return "A análise de IA requer uma API_KEY configurada nas variáveis de ambiente do Vercel.";
+    return "Erro: API_KEY não configurada no Vercel. Adicione-a nas Environment Variables.";
   }
 
   try {
+    // Instanciação correta conforme regras do SDK
     const ai = new GoogleGenAI({ apiKey });
     const isDangerous = flip.buyCity === 'Caerleon' || flip.sellCity === 'Caerleon' || flip.sellCity === 'Black Market';
     
@@ -33,7 +34,7 @@ export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
     return response.text || "Não foi possível gerar a análise técnica.";
   } catch (error: any) {
     console.error("Erro na chamada do Gemini:", error);
-    return "Ocorreu um erro ao consultar a inteligência artificial. Verifique se a cota da API foi excedida.";
+    return "Erro ao consultar a IA. Verifique os logs do Vercel.";
   }
 };
 
@@ -44,7 +45,7 @@ export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<strin
   try {
     const ai = new GoogleGenAI({ apiKey });
     const topItems = flips.slice(0, 3).map(f => f.itemName).join(', ');
-    const prompt = `Resuma o mercado atual de Albion em uma frase impactante, citando estes itens lucrativos: ${topItems}.`;
+    const prompt = `Resuma o mercado atual de Albion em uma frase impactante, citando estes itens: ${topItems}.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
