@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef } from 'react';
 import { FlipOpportunity } from '../types';
 import { RefreshCw, ExternalLink, Clock, Map as MapIcon, Info, Sparkles, Gem, Search } from 'lucide-react';
@@ -10,6 +11,7 @@ interface MarketTableProps {
   onSearchChange: (query: string) => void;
   availableItems: string[];
   onShowRoute: (flip: FlipOpportunity) => void;
+  onShowAnalysis: (flip: FlipOpportunity) => void;
   onRefresh: () => void;
 }
 
@@ -25,6 +27,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
   onSearchChange,
   availableItems,
   onShowRoute, 
+  onShowAnalysis,
   onRefresh 
 }) => {
   const [sortField, setSortField] = useState<keyof FlipOpportunity>('profit');
@@ -162,7 +165,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
             </div>
           </div>
 
-          {/* Segunda linha: Busca (abaixo dos seletores) */}
+          {/* Segunda linha: Busca */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
@@ -199,7 +202,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
                 </div>
               </th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-center">Mapa</th>
+              <th className="px-6 py-4 text-center">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/50">
@@ -255,12 +258,22 @@ const MarketTable: React.FC<MarketTableProps> = ({
                   </div>
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <button 
-                    onClick={() => onShowRoute(flip)} 
-                    className="p-2.5 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-lg border border-slate-600" 
-                  >
-                    <MapIcon className="h-5 w-5" />
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => onShowAnalysis(flip)} 
+                      className="p-2.5 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-md border border-indigo-600/20"
+                      title="Análise da IA"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => onShowRoute(flip)} 
+                      className="p-2.5 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-lg border border-slate-600" 
+                      title="Ver Rota"
+                    >
+                      <MapIcon className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

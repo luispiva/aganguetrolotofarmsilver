@@ -54,7 +54,7 @@ const Navbar: React.FC<NavbarProps> = ({
               Twitch
             </a>
           </div>
-          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80 animate-pulse">
+          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white">
             Se for chorar manda áudio.
           </div>
         </div>

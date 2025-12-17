@@ -1,16 +1,15 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { FlipOpportunity } from "../types";
 
+/**
+ * Analisa uma oportunidade de flip usando o modelo Gemini 3 Flash.
+ * Segue rigorosamente as diretrizes do SDK para instanciamento direto e acesso a propriedades.
+ */
 export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    return "Erro: API_KEY não configurada no Vercel. Adicione-a nas Environment Variables.";
-  }
-
   try {
-    // Instanciação correta conforme regras do SDK
-    const ai = new GoogleGenAI({ apiKey });
+    // Instanciação correta com o process.env.API_KEY direto conforme diretrizes do desenvolvedor
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const isDangerous = flip.buyCity === 'Caerleon' || flip.sellCity === 'Caerleon' || flip.sellCity === 'Black Market';
     
     const prompt = `
@@ -31,21 +30,24 @@ export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
       contents: prompt,
     });
 
+    // Acesso direto à propriedade .text conforme as regras (não é um método)
     return response.text || "Não foi possível gerar a análise técnica.";
   } catch (error: any) {
     console.error("Erro na chamada do Gemini:", error);
-    return "Erro ao consultar a IA. Verifique os logs do Vercel.";
+    return "Erro ao consultar a IA para análise técnica.";
   }
 };
 
+/**
+ * Gera um resumo do mercado atual usando IA.
+ */
 export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || flips.length === 0) return "";
+  if (flips.length === 0) return "";
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const topItems = flips.slice(0, 3).map(f => f.itemName).join(', ');
-    const prompt = `Resuma o mercado atual de Albion em uma frase impactante, citando estes itens: ${topItems}.`;
+    const prompt = `Resuma o mercado atual de Albion em uma frase impactante e curta (máximo 15 palavras), citando estes itens como tendências: ${topItems}.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -54,6 +56,7 @@ export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<strin
 
     return response.text || "";
   } catch (error) {
+    console.error("Erro ao gerar resumo do mercado:", error);
     return "";
   }
 };
