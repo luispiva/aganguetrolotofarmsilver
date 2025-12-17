@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { FlipOpportunity } from '../types';
 import { ArrowRight, BrainCircuit, RefreshCw, ExternalLink, Clock, TrendingDown, BarChart3, Map as MapIcon } from 'lucide-react';
 
@@ -6,13 +6,21 @@ interface MarketTableProps {
   data: FlipOpportunity[];
   isLoading: boolean;
   onAnalyze: (flip: FlipOpportunity) => void;
-  onShowRoute: (flip: FlipOpportunity) => void; // Nova prop
+  onShowRoute: (flip: FlipOpportunity) => void;
   onRefresh: () => void;
 }
+
+const ROW_HEIGHT = 88; // Altura estimada da linha em pixels (incluindo padding)
+const VISIBLE_ROWS = 10; // Quantidade de linhas visíveis aproximada
+const BUFFER_ROWS = 5; // Linhas extras para renderizar antes/depois da viewport para suavidade
 
 const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, onShowRoute, onRefresh }) => {
   const [sortField, setSortField] = useState<keyof FlipOpportunity>('profit');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  
+  // Virtual Scroll State
+  const [scrollTop, setScrollTop] = useState(0);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (field: keyof FlipOpportunity) => {
     if (sortField === field) {
@@ -21,24 +29,48 @@ const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, o
       setSortField(field);
       setSortDir('desc');
     }
+    // Reset scroll ao ordenar
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+      setScrollTop(0);
+    }
   };
 
-  const sortedData = [...data].sort((a, b) => {
-    const valA = a[sortField];
-    const valB = b[sortField];
-    
-    // Handle string comparison for lastUpdate
-    if (sortField === 'lastUpdate') {
-       return sortDir === 'asc' 
-         ? new Date(a.lastUpdate).getTime() - new Date(b.lastUpdate).getTime()
-         : new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime();
-    }
+  // Otimização: Memoizar a ordenação para não recalcular a cada scroll
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      const valA = a[sortField];
+      const valB = b[sortField];
+      
+      if (sortField === 'lastUpdate') {
+         return sortDir === 'asc' 
+           ? new Date(a.lastUpdate).getTime() - new Date(b.lastUpdate).getTime()
+           : new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime();
+      }
 
-    if (typeof valA === 'number' && typeof valB === 'number') {
-      return sortDir === 'asc' ? valA - valB : valB - valA;
-    }
-    return 0;
-  });
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDir === 'asc' ? valA - valB : valB - valA;
+      }
+      return 0;
+    });
+  }, [data, sortField, sortDir]);
+
+  // Lógica de Virtual Scroll
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
+
+  const totalHeight = sortedData.length * ROW_HEIGHT;
+  const startNode = Math.floor(scrollTop / ROW_HEIGHT);
+  const startIndex = Math.max(0, startNode - BUFFER_ROWS);
+  const endIndex = Math.min(
+    sortedData.length,
+    startNode + VISIBLE_ROWS + BUFFER_ROWS
+  );
+
+  const visibleData = sortedData.slice(startIndex, endIndex);
+  const paddingTop = startIndex * ROW_HEIGHT;
+  const paddingBottom = Math.max(0, totalHeight - (endIndex * ROW_HEIGHT));
 
   const getProfitColor = (margin: number) => {
     if (margin > 30) return 'text-green-400';
@@ -69,39 +101,13 @@ const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, o
     }
   };
 
-  // Configuração visual avançada para encantamentos
   const getEnchantmentConfig = (enchantment: number) => {
     switch(enchantment) {
-      case 1: return {
-        border: 'border-green-500',
-        shadow: 'shadow-[0_0_15px_-3px_rgba(34,197,94,0.6)]', // Green Glow
-        badgeBg: 'bg-green-600',
-        text: 'text-green-400'
-      };
-      case 2: return {
-        border: 'border-blue-500',
-        shadow: 'shadow-[0_0_15px_-3px_rgba(59,130,246,0.6)]', // Blue Glow
-        badgeBg: 'bg-blue-600',
-        text: 'text-blue-400'
-      };
-      case 3: return {
-        border: 'border-purple-500',
-        shadow: 'shadow-[0_0_15px_-3px_rgba(168,85,247,0.6)]', // Purple Glow
-        badgeBg: 'bg-purple-600',
-        text: 'text-purple-400'
-      };
-      case 4: return {
-        border: 'border-yellow-400',
-        shadow: 'shadow-[0_0_15px_-3px_rgba(250,204,21,0.6)]', // Gold Glow
-        badgeBg: 'bg-yellow-500',
-        text: 'text-yellow-400'
-      };
-      default: return {
-        border: 'border-slate-600',
-        shadow: '',
-        badgeBg: 'bg-slate-700',
-        text: 'text-slate-400'
-      };
+      case 1: return { border: 'border-green-500', shadow: 'shadow-[0_0_15px_-3px_rgba(34,197,94,0.6)]', badgeBg: 'bg-green-600', text: 'text-green-400' };
+      case 2: return { border: 'border-blue-500', shadow: 'shadow-[0_0_15px_-3px_rgba(59,130,246,0.6)]', badgeBg: 'bg-blue-600', text: 'text-blue-400' };
+      case 3: return { border: 'border-purple-500', shadow: 'shadow-[0_0_15px_-3px_rgba(168,85,247,0.6)]', badgeBg: 'bg-purple-600', text: 'text-purple-400' };
+      case 4: return { border: 'border-yellow-400', shadow: 'shadow-[0_0_15px_-3px_rgba(250,204,21,0.6)]', badgeBg: 'bg-yellow-500', text: 'text-yellow-400' };
+      default: return { border: 'border-slate-600', shadow: '', badgeBg: 'bg-slate-700', text: 'text-slate-400' };
     }
   };
 
@@ -109,7 +115,6 @@ const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, o
     const diff = (new Date().getTime() - new Date(dateString + 'Z').getTime()) / 1000;
     const minutes = Math.floor(diff / 60);
     const hours = Math.floor(minutes / 60);
-
     if (hours > 0) return `${hours}h atrás`;
     if (minutes > 0) return `${minutes}m atrás`;
     return 'Agora';
@@ -122,20 +127,18 @@ const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, o
     return 'text-red-400';
   };
 
-  // Formatter function to strip decimals and ensure correct locale (pt-BR)
   const formatSilver = (value: number) => {
-    // Remove os 'três zeros extras' (divide por 1000) conforme solicitado
     const adjustedValue = value / 1000;
-    // Força o locale pt-BR para garantir que o ponto seja separador de milhar e remove decimais
     return adjustedValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
   };
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
-      <div className="p-6 border-b border-slate-700 flex justify-between items-center flex-wrap gap-4">
+    <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col h-[800px]">
+      {/* Header Fixo do Card */}
+      <div className="p-6 border-b border-slate-700 flex justify-between items-center flex-wrap gap-4 bg-slate-800 z-10">
         <div>
           <h2 className="text-xl font-bold text-white">Oportunidades de Mercado</h2>
-          <p className="text-slate-400 text-sm mt-1">Comparando preços entre cidades (apenas itens na lista de observação)</p>
+          <p className="text-slate-400 text-sm mt-1">Comparando preços entre cidades ({sortedData.length} itens encontrados)</p>
         </div>
         <button 
           onClick={onRefresh}
@@ -147,11 +150,16 @@ const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, o
         </button>
       </div>
       
-      <div className="overflow-x-auto">
+      {/* Container com Scroll */}
+      <div 
+        className="overflow-y-auto flex-1 relative" 
+        ref={tableContainerRef}
+        onScroll={handleScroll}
+      >
         <table className="w-full text-left text-sm text-slate-400">
-          <thead className="bg-slate-900/50 text-xs uppercase font-medium text-slate-500">
+          <thead className="bg-slate-900 text-xs uppercase font-medium text-slate-500 sticky top-0 z-20 shadow-md">
             <tr>
-              <th className="px-6 py-4 cursor-pointer hover:text-slate-300" onClick={() => handleSort('itemName')}>Item / Verificar</th>
+              <th className="px-6 py-4 cursor-pointer hover:text-slate-300 w-1/4" onClick={() => handleSort('itemName')}>Item / Verificar</th>
               <th className="px-6 py-4 cursor-pointer hover:text-slate-300" onClick={() => handleSort('buyCity')}>Rota</th>
               <th className="px-6 py-4 text-right cursor-pointer hover:text-slate-300" onClick={() => handleSort('buyPrice')}>Compra</th>
               <th className="px-6 py-4 text-right cursor-pointer hover:text-slate-300" onClick={() => handleSort('sellPrice')}>Venda</th>
@@ -170,125 +178,136 @@ const MarketTable: React.FC<MarketTableProps> = ({ data, isLoading, onAnalyze, o
                  </td>
                </tr>
             ) : (
-              sortedData.map((flip) => {
-                const qualityInfo = getQualityLabel(flip.quality);
-                const enchConfig = getEnchantmentConfig(flip.enchantment);
-                const isSellAboveAverage = flip.sellPrice > flip.marketAverage;
-                
-                return (
-                  <tr key={flip.id} className="hover:bg-slate-700/50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-white">
-                      <div className="flex items-center gap-3">
-                        <a 
-                          href={`https://albion-online-data.com/view/charts?item=${flip.itemId}&quality=${flip.quality}`} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className={`relative h-14 w-14 flex-shrink-0 rounded-lg border-2 p-0.5 cursor-pointer hover:scale-105 transition-all bg-slate-900 ${enchConfig.border} ${enchConfig.shadow}`}
-                          title="Clique para verificar no site oficial"
-                        >
-                          <img 
-                            src={flip.iconUrl} 
-                            alt={flip.itemName}
-                            className="h-full w-full object-contain"
-                            loading="lazy"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://render.albiononline.com/v1/item/T1_TRASH`; 
-                            }}
-                          />
-                          
-                          {/* Badge de Encantamento (Canto Superior Direito) */}
-                          {flip.enchantment > 0 && (
-                            <div className={`absolute -top-2 -right-2 ${enchConfig.badgeBg} text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full shadow-sm z-10 border border-slate-900`}>
-                              {flip.enchantment}
+              <>
+                {/* Espaçador Superior - Simula os itens acima do scroll */}
+                {paddingTop > 0 && (
+                  <tr style={{ height: `${paddingTop}px` }}>
+                    <td colSpan={9} />
+                  </tr>
+                )}
+
+                {/* Itens Visíveis */}
+                {visibleData.map((flip) => {
+                  const qualityInfo = getQualityLabel(flip.quality);
+                  const enchConfig = getEnchantmentConfig(flip.enchantment);
+                  const isSellAboveAverage = flip.sellPrice > flip.marketAverage;
+                  
+                  return (
+                    <tr key={flip.id} className="hover:bg-slate-700/50 transition-colors group h-[88px]">
+                      <td className="px-6 py-4 font-medium text-white">
+                        <div className="flex items-center gap-3">
+                          <a 
+                            href={`https://albion-online-data.com/view/charts?item=${flip.itemId}&quality=${flip.quality}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className={`relative h-14 w-14 flex-shrink-0 rounded-lg border-2 p-0.5 cursor-pointer hover:scale-105 transition-all bg-slate-900 ${enchConfig.border} ${enchConfig.shadow}`}
+                            title="Clique para verificar no site oficial"
+                          >
+                            <img 
+                              src={flip.iconUrl} 
+                              alt={flip.itemName}
+                              className="h-full w-full object-contain"
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://render.albiononline.com/v1/item/T1_TRASH`; 
+                              }}
+                            />
+                            
+                            {flip.enchantment > 0 && (
+                              <div className={`absolute -top-2 -right-2 ${enchConfig.badgeBg} text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full shadow-sm z-10 border border-slate-900`}>
+                                {flip.enchantment}
+                              </div>
+                            )}
+
+                            <div className="absolute -bottom-2 -left-2 bg-slate-800 text-[9px] font-bold px-1 py-0.5 rounded border border-slate-600 text-slate-300 shadow-sm z-10">
+                              {flip.tier}
                             </div>
-                          )}
+                          </a>
 
-                          {/* Badge de Tier (Canto Inferior Esquerdo) */}
-                          <div className="absolute -bottom-2 -left-2 bg-slate-800 text-[9px] font-bold px-1 py-0.5 rounded border border-slate-600 text-slate-300 shadow-sm z-10">
-                            {flip.tier}
-                          </div>
-
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-md">
-                             <ExternalLink className="h-4 w-4 text-white" />
-                          </div>
-                        </a>
-
-                        <div className="flex flex-col">
-                          <span className="truncate max-w-[150px] md:max-w-xs flex items-center gap-2 text-base">
-                             {flip.itemName}
-                             {flip.enchantment > 0 && <span className={`${enchConfig.text} font-bold`}>.{flip.enchantment}</span>}
-                          </span>
-                          <div className="flex gap-2 mt-1">
-                             <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border w-fit ${qualityInfo.class}`}>
-                                {qualityInfo.text}
-                             </span>
+                          <div className="flex flex-col">
+                            <span className="truncate max-w-[150px] md:max-w-xs flex items-center gap-2 text-base">
+                               {flip.itemName}
+                               {flip.enchantment > 0 && <span className={`${enchConfig.text} font-bold`}>.{flip.enchantment}</span>}
+                            </span>
+                            <div className="flex gap-2 mt-1">
+                               <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border w-fit ${qualityInfo.class}`}>
+                                  {qualityInfo.text}
+                               </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <span className={getCityColor(flip.buyCity)}>{flip.buyCity}</span>
-                        <ArrowRight className="h-3 w-3 text-slate-600" />
-                        <span className={getCityColor(flip.sellCity)}>{flip.sellCity}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-300">
-                      <div className="flex flex-col items-end">
-                        <span>{formatSilver(flip.buyPrice)}</span>
-                        {flip.discount > 15 && (
-                           <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-1 rounded mt-0.5 border border-green-500/20" title={`Este item está ${flip.discount.toFixed(0)}% mais barato que a média das outras cidades.`}>
-                             <TrendingDown size={10} /> {flip.discount.toFixed(0)}% média
-                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-300">
-                      {formatSilver(flip.sellPrice)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-xs">
-                       <div className="flex flex-col items-end gap-1">
-                         <span className="text-slate-400">{formatSilver(flip.marketAverage)}</span>
-                         {isSellAboveAverage && (
-                           <span className="text-[10px] text-indigo-400 flex items-center gap-1 bg-indigo-500/10 px-1 rounded border border-indigo-500/20" title="Preço de venda acima da média global">
-                             <BarChart3 size={10} /> Acima Média
-                           </span>
-                         )}
-                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-amber-400 font-bold">
-                      +{formatSilver(flip.profit)}
-                    </td>
-                    <td className={`px-6 py-4 text-right font-mono font-bold ${getProfitColor(flip.profitMargin)}`}>
-                      {flip.profitMargin.toFixed(0)}%
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className={`flex items-center gap-1.5 text-xs font-medium ${getTimeColor(flip.lastUpdate)}`}>
-                        <Clock className="h-3 w-3" />
-                        {getTimeAgo(flip.lastUpdate)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button 
-                          onClick={() => onShowRoute(flip)}
-                          className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
-                          title="Ver Rota no Mapa"
-                        >
-                          <MapIcon className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => onAnalyze(flip)}
-                          className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-colors hover:scale-105 transform duration-200"
-                          title="Análise com IA"
-                        >
-                          <BrainCircuit className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <span className={getCityColor(flip.buyCity)}>{flip.buyCity}</span>
+                          <ArrowRight className="h-3 w-3 text-slate-600" />
+                          <span className={getCityColor(flip.sellCity)}>{flip.sellCity}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-slate-300">
+                        <div className="flex flex-col items-end">
+                          <span>{formatSilver(flip.buyPrice)}</span>
+                          {flip.discount > 15 && (
+                             <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-1 rounded mt-0.5 border border-green-500/20" title={`Este item está ${flip.discount.toFixed(0)}% mais barato que a média das outras cidades.`}>
+                               <TrendingDown size={10} /> {flip.discount.toFixed(0)}% média
+                             </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-slate-300">
+                        {formatSilver(flip.sellPrice)}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-xs">
+                         <div className="flex flex-col items-end gap-1">
+                           <span className="text-slate-400">{formatSilver(flip.marketAverage)}</span>
+                           {isSellAboveAverage && (
+                             <span className="text-[10px] text-indigo-400 flex items-center gap-1 bg-indigo-500/10 px-1 rounded border border-indigo-500/20" title="Preço de venda acima da média global">
+                               <BarChart3 size={10} /> Acima Média
+                             </span>
+                           )}
+                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-amber-400 font-bold">
+                        +{formatSilver(flip.profit)}
+                      </td>
+                      <td className={`px-6 py-4 text-right font-mono font-bold ${getProfitColor(flip.profitMargin)}`}>
+                        {flip.profitMargin.toFixed(0)}%
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${getTimeColor(flip.lastUpdate)}`}>
+                          <Clock className="h-3 w-3" />
+                          {getTimeAgo(flip.lastUpdate)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button 
+                            onClick={() => onShowRoute(flip)}
+                            className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
+                            title="Ver Rota no Mapa"
+                          >
+                            <MapIcon className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => onAnalyze(flip)}
+                            className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-colors hover:scale-105 transform duration-200"
+                            title="Análise com IA"
+                          >
+                            <BrainCircuit className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {/* Espaçador Inferior - Simula os itens abaixo do scroll */}
+                {paddingBottom > 0 && (
+                  <tr style={{ height: `${paddingBottom}px` }}>
+                    <td colSpan={9} />
                   </tr>
-                );
-              })
+                )}
+              </>
             )}
           </tbody>
         </table>
