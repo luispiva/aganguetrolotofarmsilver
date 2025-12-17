@@ -1,22 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 import { FlipOpportunity } from "../types";
 
-// Initialize the API client
-// Note: This assumes process.env.API_KEY is available.
-// In a real deployment, ensure this is set safely.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Inicialização seguindo as diretrizes de segurança e performance
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
-  if (!process.env.API_KEY) {
-    return "Chave de API ausente. Por favor, configure a variável de ambiente.";
-  }
-
   try {
     // 1. Cálculo de Taxa e Custos
     const taxRate = 0.065; // 6.5% Premium
     const taxCost = Math.floor(flip.sellPrice * taxRate);
     
-    // 2. Análise de Risco de Rota (Distância/Perigo)
+    // 2. Análise de Risco de Rota
     const isDangerousRoute = 
       flip.buyCity === 'Caerleon' || 
       flip.sellCity === 'Caerleon' || 
@@ -57,22 +51,18 @@ export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
     return response.text || "Não foi possível gerar a análise detalhada.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Análise de IA indisponível no momento. Tente novamente mais tarde.";
+    return "Análise de IA indisponível. Verifique se a API_KEY foi configurada na Vercel.";
   }
 };
 
 export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<string> => {
-  if (!process.env.API_KEY) {
-    return "Chave de API ausente.";
-  }
-
   try {
     const topFlips = flips.slice(0, 5).map(f => `${f.itemName}: Compra ${f.buyCity} -> Venda ${f.sellCity} (${f.profitMargin}% margem)`).join('\n');
 
@@ -85,7 +75,7 @@ export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<strin
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
