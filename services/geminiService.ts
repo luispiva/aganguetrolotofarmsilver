@@ -1,31 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { FlipOpportunity } from "../types";
 
-/**
- * Inicializa o cliente Gemini de forma segura.
- * O process.env.API_KEY é injetado pelo Vite conforme definido no vite.config.ts.
- */
-const getAIClient = () => {
-  try {
-    const key = process.env.API_KEY;
-    if (!key || key === "undefined" || key === "") {
-      console.warn("Aviso: API_KEY não configurada nas variáveis de ambiente.");
-      return null;
-    }
-    return new GoogleGenAI({ apiKey: key });
-  } catch (e) {
-    console.error("Erro ao inicializar GoogleGenAI:", e);
-    return null;
-  }
-};
-
 export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
-  const genAI = getAIClient();
-  if (!genAI) {
-    return "A análise de IA requer uma API_KEY configurada na Vercel para funcionar.";
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    return "A análise de IA requer uma API_KEY configurada nas variáveis de ambiente do Vercel.";
   }
 
   try {
+    const ai = new GoogleGenAI({ apiKey });
     const isDangerous = flip.buyCity === 'Caerleon' || flip.sellCity === 'Caerleon' || flip.sellCity === 'Black Market';
     
     const prompt = `
@@ -35,33 +19,34 @@ export const analyzeTrade = async (flip: FlipOpportunity): Promise<string> => {
       - Rota: ${flip.buyCity} -> ${flip.sellCity}
       - Lucro Estimado: ${flip.profit.toLocaleString()} de prata
       - Margem (ROI): ${flip.profitMargin}%
-      - Risco da Rota: ${isDangerous ? 'ALTO (Zona Vermelha)' : 'BAIXO (Zonas Seguras)'}
+      - Risco da Rota: ${isDangerous ? 'ALTO (Zona Vermelha - Full Loot)' : 'BAIXO (Zonas Seguras)'}
       
-      Forneça uma análise de no máximo 50 palavras em Português do Brasil focando em liquidez e perigo. 
-      Termine com um veredito curto: [RECOMENDADO], [CUIDADO] ou [ARRISCADO].
+      Forneça uma análise técnica curta (máximo 50 palavras) em Português do Brasil.
+      Veredito final em uma palavra entre colchetes: [RECOMENDADO], [CUIDADO] ou [ARRISCADO].
     `;
 
-    const response = await genAI.models.generateContent({
+    const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
-    return response.text || "Não foi possível obter uma análise clara no momento.";
-  } catch (error) {
+    return response.text || "Não foi possível gerar a análise técnica.";
+  } catch (error: any) {
     console.error("Erro na chamada do Gemini:", error);
-    return "Ocorreu um erro ao consultar a inteligência artificial.";
+    return "Ocorreu um erro ao consultar a inteligência artificial. Verifique se a cota da API foi excedida.";
   }
 };
 
 export const getMarketOverview = async (flips: FlipOpportunity[]): Promise<string> => {
-  const genAI = getAIClient();
-  if (!genAI || flips.length === 0) return "";
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || flips.length === 0) return "";
 
   try {
+    const ai = new GoogleGenAI({ apiKey });
     const topItems = flips.slice(0, 3).map(f => f.itemName).join(', ');
-    const prompt = `Resuma o mercado atual de Albion Online em uma frase curta baseado nestes itens lucrativos: ${topItems}.`;
+    const prompt = `Resuma o mercado atual de Albion em uma frase impactante, citando estes itens lucrativos: ${topItems}.`;
 
-    const response = await genAI.models.generateContent({
+    const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
