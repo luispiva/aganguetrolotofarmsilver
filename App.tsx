@@ -61,17 +61,35 @@ const App: React.FC = () => {
     }
   }, [data]);
 
+  // Função auxiliar para estimar custo de viagem (comida, veneno, tempo, reparo)
+  const calculateTravelCost = (buyCity: string, sellCity: string, tier: string): number => {
+    const itemTier = parseInt(tier.replace('T', '')) || 4;
+    const isDangerous = buyCity === 'Caerleon' || sellCity === 'Caerleon' || sellCity === 'Black Market';
+    
+    // Custo base: Rotas fatais exigem sets de fuga e consumíveis caros
+    const baseLogistics = isDangerous ? 2500 : 1000;
+    
+    // Multiplicador por Tier (itens maiores são mais pesados e valiosos para segurar)
+    const tierMultiplier = itemTier * 0.8;
+    
+    return Math.floor(baseLogistics * tierMultiplier);
+  };
+
   const processedData = useMemo(() => {
     const totalTaxRate = hasPremium ? 0.065 : 0.105;
     
     return data.map(item => {
+      const travelCost = calculateTravelCost(item.buyCity, item.sellCity, item.tier);
       const revenueAfterTaxes = item.sellPrice * (1 - totalTaxRate);
-      const profit = Math.floor(revenueAfterTaxes - item.buyPrice);
-      const profitMargin = (profit / item.buyPrice) * 100;
+      
+      // Lucro agora deduz o custo de logística
+      const profit = Math.floor(revenueAfterTaxes - item.buyPrice - travelCost);
+      const profitMargin = (profit / (item.buyPrice + travelCost)) * 100;
 
       return {
         ...item,
         profit,
+        travelCost, // Passamos o custo para exibição na tabela
         profitMargin: parseFloat(profitMargin.toFixed(2))
       };
     }).filter(item => item.profit > 0);

@@ -31,6 +31,9 @@ const DEMO_ITEMS = [
   // Armaduras (Sets Populares)
   "T4_HEAD_PLATE_SET3", "T5_HEAD_PLATE_SET3", "T6_HEAD_PLATE_SET3", "T7_HEAD_PLATE_SET3", "T8_HEAD_PLATE_SET3",
   "T4_ARMOR_LEATHER_SET1", "T5_ARMOR_LEATHER_SET1", "T6_ARMOR_LEATHER_SET1",
+  "T4_ARMOR_LEATHER_SET3", "T5_ARMOR_LEATHER_SET3", "T6_ARMOR_LEATHER_SET3", "T7_ARMOR_LEATHER_SET3", "T8_ARMOR_LEATHER_SET3", // Casaco de Assassino
+  "T4_ARMOR_LEATHER_SET3@1", "T4_ARMOR_LEATHER_SET3@2", "T4_ARMOR_LEATHER_SET3@3",
+  "T5_ARMOR_LEATHER_SET3@1", "T5_ARMOR_LEATHER_SET3@2", "T6_ARMOR_LEATHER_SET3@1", "T6_ARMOR_LEATHER_SET3@2",
   "T4_SHOES_CLOTH_SET2", "T5_SHOES_CLOTH_SET2", "T6_SHOES_CLOTH_SET2",
   "T4_ARMOR_PLATE_SET2", "T6_ARMOR_PLATE_SET2", "T8_ARMOR_PLATE_SET2", // Soldier Armor
   "T4_HEAD_LEATHER_SET2", "T6_HEAD_LEATHER_SET2", "T8_HEAD_LEATHER_SET2", // Hunter Hood
@@ -75,6 +78,7 @@ const ITEM_TRANSLATIONS: Record<string, string> = {
   'ARMOR_PLATE_SET2': 'Armadura de Soldado',
   'HEAD_LEATHER_SET2': 'Capuz de Caçador',
   'ARMOR_LEATHER_SET1': 'Casaco de Mercenário',
+  'ARMOR_LEATHER_SET3': 'Casaco de Assassino',
   'SHOES_CLOTH_SET2': 'Sandálias de Clérigo',
   'MOUNT_HORSE': 'Cavalo de Montar',
   'MOUNT_OX': 'Boi de Transporte',
@@ -152,7 +156,7 @@ const generateMockData = (): FlipOpportunity[] => {
       marketAverage: Math.floor(basePrice * 1.2),
       profit: Math.floor(profit),
       profitMargin: parseFloat(((profit / buyPrice) * 100).toFixed(2)),
-      volume: 100,
+      volume: Math.floor(Math.random() * 150) + 5, // Volume variado para teste de liquidez
       timestamp: new Date().toISOString(),
       lastUpdate: new Date().toISOString(),
       discount: Math.floor(Math.random() * 25)
@@ -213,7 +217,7 @@ export const fetchMarketData = async (server: GameServer): Promise<MarketRespons
             marketAverage: Math.floor(avgPrice),
             profit: 0, // Calculado no App.tsx
             profitMargin: 0, // Calculado no App.tsx
-            volume: 100, 
+            volume: Math.floor(Math.random() * 150) + 5, // Volume variado simulado
             timestamp: new Date().toISOString(),
             lastUpdate: sellEntry.sell_price_min_date,
             discount: discount

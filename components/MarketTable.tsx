@@ -1,18 +1,23 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { FlipOpportunity } from '../types';
-import { RefreshCw, Clock, Map as MapIcon, Info, Sparkles, Gem, Search, BarChart3, ShieldAlert, Tag } from 'lucide-react';
+import { RefreshCw, Clock, Map as MapIcon, Info, Sparkles, Gem, Search, BarChart3, ShieldAlert, Tag, AlertTriangle, Truck } from 'lucide-react';
+
+// Extendendo a tipagem localmente para o custo de viagem calculado no App.tsx
+interface ExtendedFlip extends FlipOpportunity {
+  travelCost?: number;
+}
 
 interface MarketTableProps {
-  data: FlipOpportunity[];
+  data: ExtendedFlip[];
   isLoading: boolean;
   selectedCity: string;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   availableItems: string[];
-  onShowRoute: (flip: FlipOpportunity) => void;
-  onShowAnalysis: (flip: FlipOpportunity) => void;
-  onShowDetails: (flip: FlipOpportunity) => void;
+  onShowRoute: (flip: ExtendedFlip) => void;
+  onShowAnalysis: (flip: ExtendedFlip) => void;
+  onShowDetails: (flip: ExtendedFlip) => void;
   onRefresh: () => void;
 }
 
@@ -32,7 +37,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
   onShowDetails,
   onRefresh 
 }) => {
-  const [sortField, setSortField] = useState<keyof FlipOpportunity>('profit');
+  const [sortField, setSortField] = useState<keyof ExtendedFlip>('profit');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [scrollTop, setScrollTop] = useState(0);
   const [selectedEnchantment, setSelectedEnchantment] = useState<string>('all');
@@ -40,7 +45,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleSort = (field: keyof FlipOpportunity) => {
+  const handleSort = (field: keyof ExtendedFlip) => {
     if (sortField === field) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
     } else {
@@ -123,7 +128,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight uppercase">Radar de Oportunidades</h2>
-            <p className="text-slate-400 text-sm mt-1">{filteredAndSortedData.length} itens encontrados para transporte</p>
+            <p className="text-slate-400 text-sm mt-1">{filteredAndSortedData.length} itens encontrados com custo de logística calculado</p>
           </div>
           <button 
             onClick={onRefresh}
@@ -170,7 +175,6 @@ const MarketTable: React.FC<MarketTableProps> = ({
             </div>
           </div>
 
-          {/* Aprimoramento do Input de Busca */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
@@ -203,8 +207,8 @@ const MarketTable: React.FC<MarketTableProps> = ({
               <th className="px-6 py-4">Rota / Risco</th>
               <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('buyPrice')}>Compra Bruta</th>
               <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('sellPrice')}>Venda Alvo</th>
-              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profit')}>Lucro Líquido</th>
-              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profitMargin')}>ROI</th>
+              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profit')}>Lucro Real</th>
+              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profitMargin')}>ROI Real</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-center">Ações</th>
             </tr>
@@ -214,6 +218,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
 
             {visibleData.map((flip) => {
               const dangerous = isDangerous(flip.buyCity, flip.sellCity);
+              const lowLiquidity = flip.volume < 30;
               return (
                 <tr key={flip.id} className="hover:bg-slate-700/30 transition-colors h-[88px]">
                   <td className="px-6 py-4">
@@ -233,7 +238,17 @@ const MarketTable: React.FC<MarketTableProps> = ({
                         )}
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-white font-medium truncate cursor-pointer hover:text-amber-400 transition-colors" onClick={() => onShowDetails(flip)}>{flip.itemName}</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-white font-medium truncate cursor-pointer hover:text-amber-400 transition-colors" onClick={() => onShowDetails(flip)}>
+                            {flip.itemName}
+                          </span>
+                          {lowLiquidity && (
+                            <AlertTriangle 
+                              className="h-3.5 w-3.5 text-amber-500 shrink-0 cursor-help" 
+                              title="Baixa Liquidez: Este item pode demorar para vender."
+                            />
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={`text-[10px] font-bold uppercase tracking-tight ${
                             flip.quality === 5 ? 'text-amber-400' : 'text-slate-500'
@@ -263,11 +278,15 @@ const MarketTable: React.FC<MarketTableProps> = ({
                   <td className="px-6 py-4 text-right font-mono text-slate-300">{formatSilver(flip.sellPrice)}</td>
                   <td className="px-6 py-4 text-right font-mono text-amber-400 font-bold">
                     <div className="flex flex-col items-end leading-none">
-                      <span>+{formatSilver(flip.profit)}</span>
-                      <span className="text-[8px] uppercase text-slate-500 font-black tracking-tighter mt-1">Líquido</span>
+                      <span className="text-emerald-400">+{formatSilver(flip.profit)}</span>
+                      {flip.travelCost && (
+                        <div className="flex items-center gap-1 text-[8px] uppercase text-slate-500 font-black tracking-tighter mt-1" title="Custo estimado de logística (Comida, Tempo, Set)">
+                          <Truck className="h-2 w-2" /> -{formatSilver(flip.travelCost)}
+                        </div>
+                      )}
                     </div>
                   </td>
-                  <td className={`px-6 py-4 text-right font-bold ${flip.profitMargin > 20 ? 'text-green-400' : flip.profitMargin > 5 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                  <td className={`px-6 py-4 text-right font-bold ${flip.profitMargin > 15 ? 'text-green-400' : flip.profitMargin > 5 ? 'text-yellow-400' : 'text-slate-400'}`}>
                     {flip.profitMargin.toFixed(0)}%
                   </td>
                   <td className="px-6 py-4">
