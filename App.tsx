@@ -8,13 +8,14 @@ import AnalysisModal from './components/AnalysisModal';
 import ItemDetailModal from './components/ItemDetailModal';
 import CaerleonTrends from './components/CaerleonTrends';
 import AboutPage from './components/AboutPage';
+import ManualPage from './components/ManualPage';
 import Footer from './components/Footer';
 import { FlipOpportunity, GameServer } from './types';
 import { fetchMarketData } from './services/albionApi';
 import { analyzeTrade, getMarketOverview } from './services/geminiService';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'market' | 'about'>('market');
+  const [currentView, setCurrentView] = useState<'market' | 'about' | 'manual'>('market');
   const [data, setData] = useState<FlipOpportunity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [apiStatus, setApiStatus] = useState<'online' | 'offline'>('online');
@@ -60,25 +61,12 @@ const App: React.FC = () => {
     }
   }, [data]);
 
-  /**
-   * REGRAS DE CÁLCULO ALBION ONLINE:
-   * 1. Taxa de Venda (Market Fee + Tax):
-   *    - Premium: 2.5% (Listing Fee) + 4% (Sales Tax) = 6.5% total
-   *    - Normal: 2.5% (Listing Fee) + 8% (Sales Tax) = 10.5% total
-   * 2. O lucro é calculado apenas subtraindo a taxa do PREÇO DE VENDA FINAL.
-   * 3. O Preço de Compra é o valor bruto pago ao vendedor (ou o custo de aquisição).
-   */
   const processedData = useMemo(() => {
     const totalTaxRate = hasPremium ? 0.065 : 0.105;
     
     return data.map(item => {
-      // Cálculo exato: Valor que entra na bolsa após as taxas do mercado de destino
       const revenueAfterTaxes = item.sellPrice * (1 - totalTaxRate);
-      
-      // Lucro Líquido Real = (Receita Pós-Taxas) - (Custo de Compra na Origem)
       const profit = Math.floor(revenueAfterTaxes - item.buyPrice);
-      
-      // ROI (Retorno sobre Investimento) baseado no custo de compra
       const profitMargin = (profit / item.buyPrice) * 100;
 
       return {
@@ -149,7 +137,7 @@ const App: React.FC = () => {
       />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
-        {currentView === 'market' ? (
+        {currentView === 'market' && (
           <>
             <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="flex-1">
@@ -185,9 +173,10 @@ const App: React.FC = () => {
                <CaerleonTrends currentServer={server} />
             </div>
           </>
-        ) : (
-          <AboutPage />
         )}
+        
+        {currentView === 'manual' && <ManualPage />}
+        {currentView === 'about' && <AboutPage />}
       </main>
 
       <Footer />

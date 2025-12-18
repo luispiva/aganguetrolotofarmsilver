@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Coins, Globe, MapPin, Crown, Youtube, Tv, BarChart2, Users, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Coins, Globe, MapPin, Crown, Youtube, Tv, BarChart2, Users, Wifi, WifiOff, Loader2, BookOpen } from 'lucide-react';
 import { GameServer } from '../types';
 
 interface NavbarProps {
@@ -11,8 +11,8 @@ interface NavbarProps {
   onCityChange: (city: string) => void;
   hasPremium: boolean;
   onPremiumToggle: (val: boolean) => void;
-  currentView: 'market' | 'about';
-  onViewChange: (view: 'market' | 'about') => void;
+  currentView: 'market' | 'about' | 'manual';
+  onViewChange: (view: 'market' | 'about' | 'manual') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
@@ -113,13 +113,22 @@ const Navbar: React.FC<NavbarProps> = ({
                 Mercado
               </button>
               <button 
+                onClick={() => onViewChange('manual')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                  currentView === 'manual' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <BookOpen className="h-4 w-4" />
+                Manual
+              </button>
+              <button 
                 onClick={() => onViewChange('about')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
                   currentView === 'about' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 <Users className="h-4 w-4" />
-                Nossa História
+                Sobre
               </button>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Coins, Heart, Youtube, Tv, ShieldCheck, Mail } from 'lucide-react';
 
@@ -56,7 +55,8 @@ const Footer: React.FC = () => {
                  <Heart className="h-5 w-5 text-red-500 mt-1 flex-shrink-0" />
                  <div>
                     <p className="text-xs font-bold text-white uppercase">Idealização</p>
-                    <p className="text-[10px] text-slate-500 uppercase font-black"L1zard</p>
+                    {/* Fixed missing closing bracket on p tag below */}
+                    <p className="text-[10px] text-slate-500 uppercase font-black">L1zard</p>
                  </div>
               </div>
             </div>
