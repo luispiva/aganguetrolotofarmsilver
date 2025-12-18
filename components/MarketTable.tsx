@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { FlipOpportunity } from '../types';
-import { RefreshCw, ExternalLink, Clock, Map as MapIcon, Info, Sparkles, Gem, Search } from 'lucide-react';
+import { RefreshCw, ExternalLink, Clock, Map as MapIcon, Info, Sparkles, Gem, Search, BarChart3 } from 'lucide-react';
 
 interface MarketTableProps {
   data: FlipOpportunity[];
@@ -12,6 +12,7 @@ interface MarketTableProps {
   availableItems: string[];
   onShowRoute: (flip: FlipOpportunity) => void;
   onShowAnalysis: (flip: FlipOpportunity) => void;
+  onShowDetails: (flip: FlipOpportunity) => void;
   onRefresh: () => void;
 }
 
@@ -28,6 +29,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
   availableItems,
   onShowRoute, 
   onShowAnalysis,
+  onShowDetails,
   onRefresh 
 }) => {
   const [sortField, setSortField] = useState<keyof FlipOpportunity>('profit');
@@ -130,7 +132,6 @@ const MarketTable: React.FC<MarketTableProps> = ({
         </div>
 
         <div className="space-y-4">
-          {/* Primeira linha: Seletores */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
               <Gem className="h-4 w-4 text-emerald-400" />
@@ -165,7 +166,6 @@ const MarketTable: React.FC<MarketTableProps> = ({
             </div>
           </div>
 
-          {/* Segunda linha: Busca */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
@@ -214,11 +214,11 @@ const MarketTable: React.FC<MarketTableProps> = ({
                   <div className="flex items-center gap-3">
                     <div 
                       className="h-12 w-12 bg-slate-900 rounded border border-slate-600 p-1 flex-shrink-0 relative group cursor-pointer"
-                      onClick={() => window.open(`https://www.albiononline2d.com/en/item/id/${flip.itemId}`, '_blank')}
+                      onClick={() => onShowDetails(flip)}
                     >
                       <img src={flip.iconUrl} alt="" className="h-full w-full object-contain" />
                       <div className="absolute inset-0 bg-indigo-500/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity">
-                         <ExternalLink className="h-4 w-4 text-white" />
+                         <BarChart3 className="h-4 w-4 text-white" />
                       </div>
                       {flip.enchantment > 0 && (
                         <div className="absolute -top-1 -right-1 bg-amber-600 text-[8px] font-bold px-1 rounded-full border border-slate-800 text-white shadow-sm">
@@ -227,7 +227,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
                       )}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-white font-medium truncate">{flip.itemName}</span>
+                      <span className="text-white font-medium truncate cursor-pointer hover:text-amber-400 transition-colors" onClick={() => onShowDetails(flip)}>{flip.itemName}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className={`text-[10px] font-bold uppercase tracking-tight ${
                           flip.quality === 5 ? 'text-amber-400' : 'text-slate-500'
@@ -259,6 +259,13 @@ const MarketTable: React.FC<MarketTableProps> = ({
                 </td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => onShowDetails(flip)} 
+                      className="p-2.5 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-md border border-slate-600"
+                      title="Detalhes do Item"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
                     <button 
                       onClick={() => onShowAnalysis(flip)} 
                       className="p-2.5 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-md border border-indigo-600/20"

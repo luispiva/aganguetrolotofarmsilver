@@ -5,6 +5,7 @@ import StatsHeader from './components/StatsHeader';
 import MarketTable from './components/MarketTable';
 import RouteModal from './components/RouteModal';
 import AnalysisModal from './components/AnalysisModal';
+import ItemDetailModal from './components/ItemDetailModal';
 import CaerleonTrends from './components/CaerleonTrends';
 import { FlipOpportunity, GameServer } from './types';
 import { fetchMarketData } from './services/albionApi';
@@ -28,6 +29,10 @@ const App: React.FC = () => {
   const [analysisText, setAnalysisText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [marketSummary, setMarketSummary] = useState('');
+
+  // Item Details State
+  const [detailFlip, setDetailFlip] = useState<FlipOpportunity | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -104,6 +109,11 @@ const App: React.FC = () => {
     setIsAnalyzing(false);
   };
 
+  const handleShowDetails = (flip: FlipOpportunity) => {
+    setDetailFlip(flip);
+    setIsDetailModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans pb-20">
       <Navbar 
@@ -145,6 +155,7 @@ const App: React.FC = () => {
              availableItems={availableItems}
              onShowRoute={handleShowRoute}
              onShowAnalysis={handleShowAnalysis}
+             onShowDetails={handleShowDetails}
              onRefresh={loadData}
            />
 
@@ -168,6 +179,15 @@ const App: React.FC = () => {
           flip={analysisFlip}
           analysis={analysisText}
           isAnalyzing={isAnalyzing}
+        />
+      )}
+
+      {detailFlip && (
+        <ItemDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          flip={detailFlip}
+          server={server}
         />
       )}
     </div>
