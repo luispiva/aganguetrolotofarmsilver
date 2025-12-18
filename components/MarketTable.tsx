@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { FlipOpportunity } from '../types';
-import { RefreshCw, ExternalLink, Clock, Map as MapIcon, Info, Sparkles, Gem, Search, BarChart3 } from 'lucide-react';
+import { RefreshCw, Clock, Map as MapIcon, Info, Sparkles, Gem, Search, BarChart3, ShieldAlert, Tag } from 'lucide-react';
 
 interface MarketTableProps {
   data: FlipOpportunity[];
@@ -113,6 +113,10 @@ const MarketTable: React.FC<MarketTableProps> = ({
     }
   };
 
+  const isDangerous = (buy: string, sell: string) => {
+    return buy === 'Caerleon' || sell === 'Caerleon' || sell === 'Black Market';
+  };
+
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col h-[750px]">
       <div className="p-6 border-b border-slate-700 bg-slate-800 z-10 space-y-6">
@@ -140,7 +144,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
                 onChange={(e) => setSelectedQuality(e.target.value)}
                 className="bg-transparent text-sm text-slate-200 focus:outline-none cursor-pointer font-medium w-full"
               >
-                <option value="all" className="bg-slate-800">Filtrar por Qualidade</option>
+                <option value="all" className="bg-slate-800">Qualquer Qualidade</option>
                 <option value="1" className="bg-slate-800">Normal</option>
                 <option value="2" className="bg-slate-800">Bom</option>
                 <option value="3" className="bg-slate-800">Excepcional</option>
@@ -156,7 +160,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
                 onChange={(e) => setSelectedEnchantment(e.target.value)}
                 className="bg-transparent text-sm text-slate-200 focus:outline-none cursor-pointer font-medium w-full"
               >
-                <option value="all" className="bg-slate-800">Filtrar por Encanto</option>
+                <option value="all" className="bg-slate-800">Qualquer Encanto</option>
                 <option value="0" className="bg-slate-800">Sem encantamento (@0)</option>
                 <option value="1" className="bg-slate-800">Encantamento @1</option>
                 <option value="2" className="bg-slate-800">Encantamento @2</option>
@@ -166,6 +170,7 @@ const MarketTable: React.FC<MarketTableProps> = ({
             </div>
           </div>
 
+          {/* Aprimoramento do Input de Busca */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
@@ -174,15 +179,18 @@ const MarketTable: React.FC<MarketTableProps> = ({
               type="text" 
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              list="items-list-table"
+              list="items-list-table-advanced"
               className="bg-slate-900 text-sm rounded-lg pl-10 pr-4 py-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 border border-slate-700 w-full placeholder-slate-500 transition-all shadow-inner"
-              placeholder="Digite o nome do item para buscar rapidamente..."
+              placeholder="Buscar por nome ou ID (Ex: Bolsa ou T4_BAG)..."
             />
-            <datalist id="items-list-table">
-               {availableItems.map((item) => (
-                 <option key={item} value={item} />
+            <datalist id="items-list-table-advanced">
+               {availableItems.map((suggestion) => (
+                 <option key={suggestion} value={suggestion} />
                ))}
             </datalist>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity">
+               <Tag className="h-4 w-4 text-slate-600" />
+            </div>
           </div>
         </div>
       </div>
@@ -192,15 +200,11 @@ const MarketTable: React.FC<MarketTableProps> = ({
           <thead className="bg-slate-900 text-[10px] uppercase font-bold text-slate-500 sticky top-0 z-20 shadow-md">
             <tr>
               <th className="px-6 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('itemName')}>Item</th>
-              <th className="px-6 py-4">Rota</th>
-              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('buyPrice')}>Compra</th>
-              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('sellPrice')}>Venda</th>
-              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profit')}>Lucro Real</th>
-              <th className="px-6 py-4 text-right cursor-pointer hover:text-white group relative" onClick={() => handleSort('profitMargin')}>
-                <div className="flex items-center justify-end gap-1">
-                  ROI <Info className="h-3 w-3" />
-                </div>
-              </th>
+              <th className="px-6 py-4">Rota / Risco</th>
+              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('buyPrice')}>Compra Bruta</th>
+              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('sellPrice')}>Venda Alvo</th>
+              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profit')}>Lucro Líquido</th>
+              <th className="px-6 py-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('profitMargin')}>ROI</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-center">Ações</th>
             </tr>
@@ -208,82 +212,96 @@ const MarketTable: React.FC<MarketTableProps> = ({
           <tbody className="divide-y divide-slate-700/50">
             {paddingTop > 0 && <tr style={{ height: `${paddingTop}px` }}><td colSpan={8} /></tr>}
 
-            {visibleData.map((flip) => (
-              <tr key={flip.id} className="hover:bg-slate-700/30 transition-colors h-[88px]">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="h-12 w-12 bg-slate-900 rounded border border-slate-600 p-1 flex-shrink-0 relative group cursor-pointer"
-                      onClick={() => onShowDetails(flip)}
-                    >
-                      <img src={flip.iconUrl} alt="" className="h-full w-full object-contain" />
-                      <div className="absolute inset-0 bg-indigo-500/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity">
-                         <BarChart3 className="h-4 w-4 text-white" />
+            {visibleData.map((flip) => {
+              const dangerous = isDangerous(flip.buyCity, flip.sellCity);
+              return (
+                <tr key={flip.id} className="hover:bg-slate-700/30 transition-colors h-[88px]">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="h-12 w-12 bg-slate-900 rounded border border-slate-600 p-1 flex-shrink-0 relative group cursor-pointer"
+                        onClick={() => onShowDetails(flip)}
+                      >
+                        <img src={flip.iconUrl} alt="" className="h-full w-full object-contain" />
+                        <div className="absolute inset-0 bg-indigo-500/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity">
+                           <BarChart3 className="h-4 w-4 text-white" />
+                        </div>
+                        {flip.enchantment > 0 && (
+                          <div className="absolute -top-1 -right-1 bg-amber-600 text-[8px] font-bold px-1 rounded-full border border-slate-800 text-white shadow-sm">
+                            @{flip.enchantment}
+                          </div>
+                        )}
                       </div>
-                      {flip.enchantment > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-amber-600 text-[8px] font-bold px-1 rounded-full border border-slate-800 text-white shadow-sm">
-                          @{flip.enchantment}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-white font-medium truncate cursor-pointer hover:text-amber-400 transition-colors" onClick={() => onShowDetails(flip)}>{flip.itemName}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[10px] font-bold uppercase tracking-tight ${
+                            flip.quality === 5 ? 'text-amber-400' : 'text-slate-500'
+                          }`}>
+                            {getQualityName(flip.quality)}
+                          </span>
+                          <span className="text-[8px] text-slate-600 font-mono uppercase">{flip.itemId.split('_').slice(1).join('_')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-slate-300">{flip.buyCity}</span>
+                        <span className="text-slate-600">➔</span>
+                        <span className="text-slate-300 font-bold">{flip.sellCity}</span>
+                      </div>
+                      {dangerous && (
+                        <div className="flex items-center gap-1 text-[9px] font-black text-red-500 uppercase tracking-tighter">
+                          <ShieldAlert className="h-2.5 w-2.5" /> Zona Letal
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-white font-medium truncate cursor-pointer hover:text-amber-400 transition-colors" onClick={() => onShowDetails(flip)}>{flip.itemName}</span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[10px] font-bold uppercase tracking-tight ${
-                          flip.quality === 5 ? 'text-amber-400' : 'text-slate-500'
-                        }`}>
-                          {getQualityName(flip.quality)}
-                        </span>
-                      </div>
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-slate-300">{formatSilver(flip.buyPrice)}</td>
+                  <td className="px-6 py-4 text-right font-mono text-slate-300">{formatSilver(flip.sellPrice)}</td>
+                  <td className="px-6 py-4 text-right font-mono text-amber-400 font-bold">
+                    <div className="flex flex-col items-end leading-none">
+                      <span>+{formatSilver(flip.profit)}</span>
+                      <span className="text-[8px] uppercase text-slate-500 font-black tracking-tighter mt-1">Líquido</span>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-300">{flip.buyCity}</span>
-                    <span className="text-slate-600">➔</span>
-                    <span className="text-slate-300 font-bold">{flip.sellCity}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right font-mono text-slate-300">{formatSilver(flip.buyPrice)}</td>
-                <td className="px-6 py-4 text-right font-mono text-slate-300">{formatSilver(flip.sellPrice)}</td>
-                <td className="px-6 py-4 text-right font-mono text-amber-400 font-bold">+{formatSilver(flip.profit)}</td>
-                <td className={`px-6 py-4 text-right font-bold ${flip.profitMargin > 20 ? 'text-green-400' : flip.profitMargin > 5 ? 'text-yellow-400' : 'text-slate-400'}`}>
-                  {flip.profitMargin.toFixed(0)}%
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                    <Clock className="h-3 w-3" />
-                    {flip.lastUpdate.split('T')[1]?.substring(0, 5) || 'Recente'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button 
-                      onClick={() => onShowDetails(flip)} 
-                      className="p-2.5 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-md border border-slate-600"
-                      title="Detalhes do Item"
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={() => onShowAnalysis(flip)} 
-                      className="p-2.5 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-md border border-indigo-600/20"
-                      title="Análise da IA"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={() => onShowRoute(flip)} 
-                      className="p-2.5 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white rounded-lg transition-all active:scale-95 shadow-lg border border-slate-600" 
-                      title="Ver Rota"
-                    >
-                      <MapIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className={`px-6 py-4 text-right font-bold ${flip.profitMargin > 20 ? 'text-green-400' : flip.profitMargin > 5 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                    {flip.profitMargin.toFixed(0)}%
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                      <Clock className="h-3 w-3" />
+                      {flip.lastUpdate.split('T')[1]?.substring(0, 5) || 'Recente'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button 
+                        onClick={() => onShowAnalysis(flip)} 
+                        className="p-2 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg transition-all active:scale-95 border border-indigo-600/20"
+                        title="Análise IA"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => onShowRoute(flip)} 
+                        className={`p-2 rounded-lg transition-all active:scale-95 border shadow-lg flex items-center gap-2 ${
+                          dangerous 
+                          ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white' 
+                          : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600 hover:text-white'
+                        }`}
+                        title="Abrir Mapa de Risco"
+                      >
+                        <MapIcon className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase hidden xl:block">Rota</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
 
             {paddingBottom > 0 && <tr style={{ height: `${paddingBottom}px` }}><td colSpan={8} /></tr>}
           </tbody>
